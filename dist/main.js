@@ -1,184 +1,485 @@
 'use strict';
 
-const spawnerRooms = Object.values(Game.spawns).map((v) => v.room.name);
+/**
+ * 
+ * @returns { Constants }
+ */
+const buildConstants = () => {
+    const constants = {
+        spawnGoal: {
+            workers: 10 // calculate this in future?
+        },
+        room: Game.spawns['Spawn1'].room,
+        spawnName: "Spawn1"
+    };
+
+    return constants;
+};
 
 /**
- * Returns key base information
+ * 
+ * @param { string} spawnName 
+ * @returns 
  */
-const generateBaseConstants = () => {
-    // Once we have multiple spawns, pass key/value pairs including nearby resources related to each spawner
-    let mainSpawn = Game.rooms[spawnerRooms[0]]
-        .find(FIND_MY_STRUCTURES)
-        .filter((s) => s.structureType == STRUCTURE_SPAWN)[0];
+const spawnWorker = (spawnName) => {
+    const body_parts = [WORK,CARRY,MOVE];
+    const name = 'Worker' + Game.time;
+    const role = 'worker';
 
-    let potentialResource = Game.rooms[spawnerRooms[0]].find(FIND_SOURCES_ACTIVE);
-
-    return {
-        mainSpawn,
-        spawnerRooms,
-        potentialResource
+    if (Game.spawns[spawnName].spawnCreep(body_parts, name, { memory: {role, project: {}} }) === 0) {
+        return true;
+    } else {
+        return false;
     }
 };
-
-function harvest(baseConstants) {
-    const { mainSpawn, potentialResource } = baseConstants;
-
-    let harvesters = _.filter(Game.creeps,
-        (creep) => creep.memory.role == 'harvester');
-    // Move Harvester to location, harvest, then return to spawn and deposit
-    harvesters.forEach((creep) => {
-        if (!creep.memory.harvesting && creep.store[RESOURCE_ENERGY] === 0) {
-            creep.memory.harvesting = true;
-            creep.say('🔄harvest', true);
-        }
-        if (creep.memory.harvesting && creep.store.getFreeCapacity() === 0) {
-            creep.memory.harvesting = false;
-            creep.say('💲banking', true);
-        }
-        if (creep.memory.harvesting && creep.harvest(potentialResource[creep.memory.resourceDivide]) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(
-                potentialResource[creep.memory.resourceDivide],
-                { visualizePathStyle: { stroke: '#ffaa00' } });
-
-        }
-        if (!creep.memory.harvesting) {
-            mainSpawn.room.find(FIND_MY_STRUCTURES, {
-                filter: (i) => ((i.structureType == STRUCTURE_CONTAINER) &&
-                    i.store.getFreeCapacity() > 0)
-            });
-            
-            if (creep.transfer(mainSpawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(mainSpawn,
-                    { visualizePathStyle: { stroke: '#ffffff' } });
-            }
-        }
-    });
-}
-
-function economyController(baseConstants) {
-    harvest(baseConstants);
-}
-
-const upgrade = (baseConstants) => {
-    const { potentialResource } = baseConstants;
-
-    let upgraders = _.filter(Game.creeps,
-        (creep) => creep.memory.role == 'upgrader');
-    // Move Harvester to location, harvest, then return to spawn and diposit
-    upgraders.forEach((creep) => {
-        if(creep.memory.upgrading && creep.store[RESOURCE_ENERGY] === 0) {
-            creep.memory.upgrading = false;
-            creep.say('🔄harvest', true);
-        }
-        if(!creep.memory.upgrading && creep.store.getFreeCapacity() === 0){
-            creep.memory.upgrading = true;
-            creep.say('💪upgrade', true);
-        }
-        if (!creep.memory.upgrading && creep.store[RESOURCE_ENERGY] < creep.store.getCapacity()) {
-            if (creep.harvest(potentialResource[creep.memory.resourceDivide]) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(
-                    potentialResource[creep.memory.resourceDivide], 
-                    { visualizePathStyle: { stroke: '#ffaa00' } 
-                });
-            }
-        } else {
-            if(creep.room.controller) {
-
-                if(creep.room.controller.sign.username !== 'Bizzle_Dapp'
-                    && creep.signController(creep.room.controller, "Our Territory") == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(creep.room.controller,
-                        { visualizePathStyle: { stroke: '#ffaa00' }
-                    });
-                }
-                if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(creep.room.controller,
-                        { visualizePathStyle: { stroke: '#ffaa00' }
-                    });
-                }
-            }
-        }
-    });
-};
-
-function logisticsController(baseConstants) {
-    upgrade(baseConstants);
-}
-
-const constructionAnalyser = (baseConstants) => {
-    const { mainSpawn } = baseConstants;
-    
-    const terrain = Game.rooms[mainSpawn.room.name].getTerrain();
-    const buildableLocations = [];
-
-    for(let y = 0; y < 50; y++) {
-        for(let x = 0; x < 50; x++) {
-            const tile = terrain.get(x, y);
-            
-            if(tile === 0) {
-                Game.rooms[mainSpawn.room.name].visual.circle(x,y,
-                    {fill: 'transparent', radius: 0.1, stroke: 'green'});
-                buildableLocations.push({x: x, y: y});
-            }
-        }
-    }
-    console.log("Buildable Locations:");
-    Memory.buildableLocations = buildableLocations;
-};
-
-function harvesterConstruction(baseConstants) {
-    const { mainSpawn } = baseConstants;
-    // Spawn a Harvester
-    let harvesters = _.filter(Game.creeps,
-        (creep) => creep.memory.role == 'harvester');
-    if (harvesters.length < 4) {
-        let id = Date.now();
-        mainSpawn.spawnCreep([WORK, CARRY, MOVE], `Worker-${id.toString()}`, {
-            memory: { role: 'harvester', resourceDivide: (harvesters.length % 2)  }
-        });
-    }
-}
-
-function upgraderConstruction(baseConstants) {
-    const { mainSpawn } = baseConstants;
-    // Spawn an Upgrader
-    let upgraders = _.filter(Game.creeps,
-        (creep) => creep.memory.role == 'upgrader');
-    if (upgraders.length < 1) {
-        let id = Date.now();
-        mainSpawn.spawnCreep([WORK, CARRY, MOVE], `Upgrader-${id.toString()}`, {
-            memory: { role: 'upgrader', resourceDivide: (upgraders.length % 2)  }
-        });
-    }
-}
-
-let lastScanned = undefined;
-
-function CreepConstructionController(baseConstants) {
-    // Detect available building space
-    
-    if(!lastScanned || lastScanned < (Date.now() - 10000)){
-        constructionAnalyser(baseConstants);
-        lastScanned = Date.now();
-    }
-    harvesterConstruction(baseConstants);
-    upgraderConstruction(baseConstants);
-}
-
-module.exports.loop = function () {
-    const baseConstants = generateBaseConstants();
-
-    economyController(baseConstants);
-    logisticsController(baseConstants);
-    CreepConstructionController(baseConstants);
-
-    clearance();
-};
-
-function clearance(){
-    for(var name in Memory.creeps) {
+/**
+ * Clears up the Memory of fallen creeps
+ */
+const reapTheDead = () => {
+    for(const name in Memory.creeps) {
         if(!Game.creeps[name]) {
             delete Memory.creeps[name];
+            console.log('Clearing non-existing creep memory:', name);
         }
     }
-}
+};
+
+/**
+ * 
+ * @param {Constants} constants 
+ */
+const manageWorkerPopulation = (constants) => {
+    const workers = _.filter(Game.creeps, (creep) => creep.memory.role == 'worker');
+
+    if (workers.length < constants.spawnGoal.workers) {
+        spawnWorker(constants.spawnName);
+    }
+};
+
+const reaperDuties = () => {
+    // FUTURE: extend assignment to kill unrequired creeps
+    reapTheDead();
+};
+
+const PopulationManager = {
+    /**
+     * 
+     * @param {Constants} constants 
+     */
+    run: (constants) => {
+        manageWorkerPopulation(constants);
+        reaperDuties();
+    }
+};
+
+/**
+ * 
+ * @param { [][] } paths 
+ * @returns { number } index of shortest path / array
+ */
+ const getShortestPath = (paths) => {
+    let distance = 0;
+    let shortestPathIndex = 0;
+ 
+    paths.forEach((path, index) => {
+       if (index === 0) {
+          distance = path.length;
+       }
+       if (path.length < distance) {
+          shortestPathIndex = index;
+       }
+    });
+ 
+    return shortestPathIndex;
+ };
+
+const harvest = (creep, energySource, energyContainer) => {
+    if(creep.store.getFreeCapacity() > 0) {
+        if(creep.harvest(energySource) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(energySource, {visualizePathStyle: {stroke: '#ffaa00'}});
+        }
+    }
+    else {
+        if(creep.transfer(energyContainer, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(energyContainer, {visualizePathStyle: {stroke: '#ffffff'}});
+        }
+    }
+};
+
+const build = (creep, energySource, constructionSite) => {
+    if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0) {
+        creep.memory.building = false;
+        creep.say('⛏ harvest');
+    }
+    if(!creep.memory.building && creep.store.getFreeCapacity() == 0) {
+        creep.memory.building = true;
+        creep.say('🔨 build');
+    }
+    
+    if(!creep.memory.building) {
+        if(creep.harvest(energySource) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(energySource, {visualizePathStyle: {stroke: '#ffaa00'}});
+        }
+    }
+    else {
+        if(creep.build(constructionSite) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(constructionSite, {visualizePathStyle: {stroke: '#ffffff'}});
+        }
+    }
+};
+
+const upgrade = (creep, energySource) => {
+    if(creep.memory.upgrading && creep.store[RESOURCE_ENERGY] == 0) {
+        creep.memory.upgrading = false;
+        creep.say('🔄 harvest');
+    }
+    if(!creep.memory.upgrading && creep.store.getFreeCapacity() == 0) {
+        creep.memory.upgrading = true;
+        creep.say('⚡ upgrade');
+    }
+
+    if(creep.memory.upgrading) {
+        if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(creep.room.controller, {visualizePathStyle: {stroke: '#ffffff'}});
+        }
+    }
+    else {
+        if(creep.harvest(energySource) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(energySource, {visualizePathStyle: {stroke: '#ffaa00'}});
+        }
+    }
+};
+
+const repair = (creep, energySource, damagedStructure) => {
+    if(creep.memory.repairing && creep.store[RESOURCE_ENERGY] == 0) {
+        creep.memory.repairing = false;
+        creep.say('⛏ harvest');
+    }
+    if(!creep.memory.repairing && creep.store.getFreeCapacity() == 0) {
+        creep.memory.repairing = true;
+        creep.say('🛠 repair');
+    }
+    
+    if(!creep.memory.repairing) {
+        if(creep.harvest(energySource) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(energySource, {visualizePathStyle: {stroke: '#ffaa00'}});
+        }
+    }
+    else {
+        if(creep.repair(damagedStructure) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(damagedStructure, {visualizePathStyle: {stroke: '#ffffff'}});
+        }
+    }
+};
+
+const worker_assignment_type = {
+    HARVEST: 'HARVEST',
+    BUILD: 'BUILD',
+    UPGRADE: 'UPGRADE',
+    REPAIR: 'REPAIR'
+};
+/**
+ * 
+ * @param {Creep} creep 
+ */
+const doAssignment = (creep) => {
+    const energySource = Game.getObjectById(creep.memory.project.energySourceId);
+    const taskDestination = Game.structures[creep.memory.project.taskDestinationId];
+   switch (creep.memory.project.assignmentType) {
+       case worker_assignment_type.HARVEST:
+            harvest(creep, energySource, taskDestination);
+            break;
+        case worker_assignment_type.BUILD:
+            build(creep, energySource, taskDestination);
+            break;
+        case worker_assignment_type.UPGRADE:
+            upgrade(creep, energySource);
+            break;
+        case worker_assignment_type.REPAIR:
+            repair(creep, energySource, taskDestination);
+            break;
+        default:
+            harvest(creep, energySource, taskDestination);
+            break;
+   }
+};
+
+/**
+ * 
+ * @param {Room} room 
+ * @returns { Project[] } Array of Harvest Projects
+ */
+ const getAllActiveEnergyProjects = (room) => {
+    const energyContainers = room.find(FIND_MY_STRUCTURES, {
+       filter: (structure) => {
+          return (structure.structureType == STRUCTURE_SPAWN || structure.structureType == STRUCTURE_EXTENSION && 
+            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0);
+       }
+    });
+ 
+    const energySources = room.find(FIND_SOURCES_ACTIVE);
+ 
+    const projects = energyContainers.map(energyContainer => { 
+       const paths = energySources.map(source => {
+          return room.findPath(source.pos, energyContainer.pos);
+       });
+       return {
+          assignmentType: worker_assignment_type.HARVEST,
+          energySourceId: energySources[getShortestPath(paths)].id,
+          taskDestinationId: energyContainer.id,
+          workerIds: []
+       };
+    });
+ 
+    return projects;
+ };
+
+/**
+ * 
+ * @param { Project[]} storedProjects
+ * @param { Project[]} activeProjects 
+ * 
+ */
+ const addActiveProjectsToStorage = (storedProjects, activeProjects) => {
+    let updatedProjects = storedProjects;
+    const newActiveProjects = [];
+
+    activeProjects.forEach((activeProject) => {
+       let newProject = true;
+ 
+       // check if project already stored
+       storedProjects.forEach((storedProject, index) => {
+          if (activeProject.taskDestinationId === storedProject.taskDestinationId &&
+              activeProject.assignmentType === storedProject.assignmentType) {
+             newProject = false;
+          }
+       });
+ 
+       // Add new project to list
+       if (newProject) {
+            newActiveProjects.push(activeProject);
+       }
+    });
+ 
+    updatedProjects = updatedProjects.concat(newActiveProjects);
+
+    // update stored projects
+    Object.assign(storedProjects, updatedProjects);
+ };
+
+ /**
+ * 
+ * @param { Project[]} storedProjects
+ * @param { Project[]} activeProjects 
+ * 
+ * @returns { string[]} Workers on removed projects
+ * 
+ * Removes the inactive projects from the storedProjects passed in be reference
+ */
+const removeInactiveProjectsFromStorage = (storedProjects, activeProjects) => {
+    let updatedProjects = storedProjects;
+    const toBeRemovedProjectIndices = [];
+    const workersOnRemovedProjects = [];
+
+    storedProjects.forEach((storedProject, storedProjectIndex) => {
+        let projectStillActive = false;
+        // check if project still active
+        activeProjects.forEach((activeProject) => {
+            if (activeProject.taskDestinationId === storedProject.taskDestinationId &&
+                activeProject.assignmentType === storedProject.assignmentType) {
+                projectStillActive = true;
+            }
+        });
+
+        if (!projectStillActive) {
+            toBeRemovedProjectIndices.push(storedProjectIndex);
+        }
+    });
+
+    // Use reverse as to not affect index positions when splicing
+    toBeRemovedProjectIndices.reverse().forEach(index => {
+        // Add workers on to be deleted project to list
+        workersOnRemovedProjects = workersOnRemovedProjects.concat(storedProjects[index].workerIds);
+
+        // Remove the project from storeProjects
+        updatedProjects.splice(index, 1);
+    });
+
+    // Update master copy of storedProjects
+    Object.assign(storedProjects, updatedProjects);
+
+    return workersOnRemovedProjects;
+};
+
+/**
+ * @param {Room} room
+ * @returns { Project[] }
+ */
+const manageProjects = (room) => {
+    // Build up list of active Projects
+    const activeProjects = getAllActiveEnergyProjects(room);
+
+    // Get stored projects in memory
+    const storedProjects = room.memory.projects ? room.memory.projects : [];
+
+    // Remove inactive projects from storage and keep track of workers affected
+    const workersOnRemovedProjects = removeInactiveProjectsFromStorage(storedProjects,  activeProjects);
+
+    // Add new active projects to the stored projects
+    addActiveProjectsToStorage(storedProjects,  activeProjects);
+
+    // Update room memory
+    room.memory.projects = storedProjects;
+
+    // Release workers from deleted projects
+    workersOnRemovedProjects.forEach((id) => {
+        Game.creeps[id].memory.project = {};
+    });
+
+};
+
+const ProjectsManager = {
+    /**
+    * 
+    * @param {Constants} constants 
+    */
+    run: (constants) => {
+        manageProjects(constants.room);
+    }
+};
+
+/**
+ * 
+ * @param { Project[]} projects 
+ * @param {number} numberOfWorkers 
+ * 
+ * @returns {string[]} UnassignedWorkers
+ */
+const fixProjectOverAssignment = (projects, numberOfWorkers) => {
+   let updatedProjects = projects;
+   const unassignedWorkers = [];
+
+   // nothing to do if there are no projects
+   if (projects.length === 0) {
+      return unassignedWorkers;
+   }
+
+   const workersPerProject = Math.floor(numberOfWorkers / projects.length);
+   const workerRemainder = numberOfWorkers % projects.length;
+
+   // remove excess workers from projects and push to unassigned workers pool
+   projects.forEach((project, index) => {
+      // Build up project allowance based on base workers per project and any overflow
+      const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 <= index ? 1 : 0 );
+      
+      const currentNumberOfWorkers = project.workerIds.length;
+
+      if ( currentNumberOfWorkers > numberOfWorkersAllowance ) {
+         const numberOfExcessWorkers = currentNumberOfWorkers - numberOfWorkersAllowance;
+         unassignedWorkers = unassignedWorkers.concat(updatedProjects[index].workerIds.splice(-numberOfExcessWorkers, numberOfExcessWorkers));
+      }
+   });
+
+   // Update master copy of projects
+   Object.assign(projects, updatedProjects);
+
+   return unassignedWorkers;
+};
+
+/**
+ * 
+ * @param { Project[]} projects 
+ * @param {number} numberOfWorkers
+ * @param {string[]} unassignedWorkers
+ * 
+ */
+ const taskUnassignedWorkers = (projects, numberOfWorkers, unassignedWorkers) => {
+   // nothing to do if there are no projects
+   if (projects.length) {
+      let updatedProjects = projects;
+      const workersPerProject = Math.floor(numberOfWorkers / projects.length);
+      const workerRemainder = numberOfWorkers % projects.length;
+
+      // push to unassigned workers to project space
+      projects.forEach((project, index) => {
+         // Build up project allowance based on base workers per project and any overflow
+         const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 <= index ? 1 : 0 );
+         
+         const currentNumberOfWorkers = project.workerIds.length;
+
+         if ( currentNumberOfWorkers < numberOfWorkersAllowance ) {
+            const numberOfSpareSlots =  numberOfWorkersAllowance - currentNumberOfWorkers;
+            updatedProjects[index].workerIds.push(unassignedWorkers.splice(-numberOfSpareSlots, numberOfSpareSlots));
+         }
+      });
+      
+      // Update master copy of projects
+      Object.assign(projects, updatedProjects);
+   }
+
+};
+
+/**
+ * 
+ * @param {Room} room 
+ */
+const manageWorkers = (room) => {
+    // find already idle workers
+    const allWorkers = [];
+    const idleWorkers = [];
+    for(const name in Game.creeps) {
+        const creep = Game.creeps[name];
+        if (creep.memory.role === 'worker') {
+            allWorkers.push(name);
+            if(!creep.memory.project.assignmentType) {
+                idleWorkers.push(name);
+            }
+        }
+    }
+    // get stored projects from memory
+    const storeProjects = room.memory.projects ? room.memory.projects : []; 
+
+    // remove workers from overassigned projects
+    // add freed up worker to idleWorkers list
+    idleWorkers = idleWorkers.concat(fixProjectOverAssignment(storeProjects, allWorkers.length));
+
+    taskUnassignedWorkers(storeProjects, allWorkers.length, idleWorkers);
+
+    // update room memory
+    room.memory.projects = storeProjects;
+
+};
+
+const TaskMaster = {
+    /**
+    * 
+    * @param {Constants} constants 
+    */
+    run: (constants) => {
+        manageWorkers(constants.room);
+    }
+};
+
+const Workers = {
+    run: () => {
+        // execute work
+        for(var name in Game.creeps) {
+            var creep = Game.creeps[name];
+            if(creep.memory.role === 'worker' && creep.memory.project.assignmentType) {
+                doAssignment(creep);
+            }
+        }
+    }
+};
+
+module.exports.loop = function () {
+
+    const constants = buildConstants();
+
+    PopulationManager.run(constants);
+    ProjectsManager.run(constants);
+    TaskMaster.run(constants);
+    Workers.run();
+
+};
 //# sourceMappingURL=main.js.map

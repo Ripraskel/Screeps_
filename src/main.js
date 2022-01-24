@@ -1,23 +1,19 @@
-import generateBaseConstants from './Constants';
 
-import economyController from './Economy/_EconomyController';
-import logisticsContorller from './Logistics/_LogisticsController';
-import creepConstructionController from './Construction/_CreepConstructionController';
+import { buildConstants } from "./constants";
+
+import { PopulationManager } from "./PopulationManager/index";
+import { ProjectsManager } from "./ProjectsManager";
+import { TaskMaster } from "./TaskMaster";
+import { Workers } from "./Worker";
+
 
 module.exports.loop = function () {
-    const baseConstants = generateBaseConstants();
 
-    economyController(baseConstants);
-    logisticsContorller(baseConstants);
-    creepConstructionController(baseConstants);
+    const constants = buildConstants();
 
-    clearance();
-}
+    PopulationManager.run(constants);
+    ProjectsManager.run(constants);
+    TaskMaster.run(constants);
+    Workers.run();
 
-function clearance(){
-    for(var name in Memory.creeps) {
-        if(!Game.creeps[name]) {
-            delete Memory.creeps[name];
-        }
-    }
 }

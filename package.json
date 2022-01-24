@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Bizzle-Dapp/Screeps_.git"
+    "url": "git+https://github.com/Ripraskel/Screeps_.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Bizzle-Dapp/Screeps_/issues"
+    "url": "https://github.com/Ripraskel/Screeps_/issues"
   },
-  "homepage": "https://github.com/Bizzle-Dapp/Screeps_#readme",
+  "homepage": "https://github.com/Ripraskel/Screeps_#readme",
   "dependencies": {
     "@rollup/plugin-commonjs": "^21.0.1",
     "@types/lodash": "^4.14.178",

@@ -10,7 +10,7 @@ import { getShortestPath } from '../Utils/pathHelper';
  */
 export const fixProjectOverAssignment = (projects, numberOfWorkers) => {
    let updatedProjects = projects;
-   const unassignedWorkers = [];
+   let unassignedWorkers = [];
 
    // nothing to do if there are no projects
    if (projects.length === 0) {
@@ -29,7 +29,15 @@ export const fixProjectOverAssignment = (projects, numberOfWorkers) => {
 
       if ( currentNumberOfWorkers > numberOfWorkersAllowance ) {
          const numberOfExcessWorkers = currentNumberOfWorkers - numberOfWorkersAllowance;
-         unassignedWorkers = unassignedWorkers.concat(updatedProjects[index].workerIds.splice(-numberOfExcessWorkers, numberOfExcessWorkers));
+
+         const releasedWorkers = updatedProjects[index].workerIds.splice(-numberOfExcessWorkers, numberOfExcessWorkers);
+
+         // update workers project
+         releasedWorkers.forEach((workerId) => {
+            Game.creeps[workerId].memory.project = {};
+         })
+
+         unassignedWorkers = unassignedWorkers.concat(releasedWorkers);
       } else {
             // do nothing
       }

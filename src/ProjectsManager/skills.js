@@ -42,8 +42,8 @@
  */
 export const removeInactiveProjectsFromStorage = (storedProjects, activeProjects) => {
     let updatedProjects = storedProjects;
-    const toBeRemovedProjectIndices = [];
-    const workersOnRemovedProjects = [];
+    let toBeRemovedProjectIndices = [];
+    let workersOnRemovedProjects = [];
 
     storedProjects.forEach((storedProject, storedProjectIndex) => {
         let projectStillActive = false;

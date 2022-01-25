@@ -7,6 +7,6 @@ export const PopulationManager = {
      */
     run: (constants) => {
         manageWorkerPopulation(constants);
-        reaperDuties();
+        reaperDuties(constants.room);
     }
 }

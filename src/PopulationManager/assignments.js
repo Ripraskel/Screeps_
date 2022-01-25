@@ -14,7 +14,7 @@ export const manageWorkerPopulation = (constants) => {
     }
 }
 
-export const reaperDuties = () => {
+export const reaperDuties = (room) => {
     // FUTURE: extend assignment to kill unrequired creeps
-    reapTheDead();
+    reapTheDead(room);
 }

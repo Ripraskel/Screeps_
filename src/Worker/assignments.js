@@ -12,22 +12,21 @@ export const worker_assignment_type = {
  */
 export const doAssignment = (creep) => {
     const energySource = Game.getObjectById(creep.memory.project.energySourceId);
-    const taskDestination = Game.structures[creep.memory.project.taskDestinationId];
    switch (creep.memory.project.assignmentType) {
        case worker_assignment_type.HARVEST:
-            harvest(creep, energySource, taskDestination);
+            harvest(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
             break;
         case worker_assignment_type.BUILD:
-            build(creep, energySource, taskDestination);
+            build(creep, energySource,  Game.constructionSites[creep.memory.project.taskDestinationId]);
             break;
         case worker_assignment_type.UPGRADE:
-            upgrade(creep, energySource, taskDestination);
+            upgrade(creep, energySource);
             break;
         case worker_assignment_type.REPAIR:
-            repair(creep, energySource, taskDestination);
+            repair(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
             break;
         default:
-            harvest(creep, energySource, taskDestination);
+            harvest(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
             break;
    }
 };

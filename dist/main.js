@@ -35,9 +35,22 @@ const spawnWorker = (spawnName) => {
 /**
  * Clears up the Memory of fallen creeps
  */
-const reapTheDead = () => {
+const reapTheDead = (room) => {
     for(const name in Memory.creeps) {
         if(!Game.creeps[name]) {
+            let projects = room.memory.projects;
+            projects.forEach((project, projIndex) => {
+                let deadWorkerIndices = [];
+                project.workerIds.forEach((workerId, deadIndex) => {
+                    if (workerId === name) {
+                        deadWorkerIndices.push(deadIndex);
+                    }
+                });
+                deadWorkerIndices.reverse().forEach((deadIndex) =>  {
+                    room.memory.projects[projIndex].workerIds.splice(deadIndex, 1);
+                });
+            });
+            
             delete Memory.creeps[name];
             console.log('Clearing non-existing creep memory:', name);
         }
@@ -56,9 +69,9 @@ const manageWorkerPopulation = (constants) => {
     }
 };
 
-const reaperDuties = () => {
+const reaperDuties = (room) => {
     // FUTURE: extend assignment to kill unrequired creeps
-    reapTheDead();
+    reapTheDead(room);
 };
 
 const PopulationManager = {
@@ -68,7 +81,7 @@ const PopulationManager = {
      */
     run: (constants) => {
         manageWorkerPopulation(constants);
-        reaperDuties();
+        reaperDuties(constants.room);
     }
 };
 
@@ -184,25 +197,49 @@ const worker_assignment_type = {
  */
 const doAssignment = (creep) => {
     const energySource = Game.getObjectById(creep.memory.project.energySourceId);
-    const taskDestination = Game.structures[creep.memory.project.taskDestinationId];
    switch (creep.memory.project.assignmentType) {
        case worker_assignment_type.HARVEST:
-            harvest(creep, energySource, taskDestination);
+            harvest(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
             break;
         case worker_assignment_type.BUILD:
-            build(creep, energySource, taskDestination);
+            build(creep, energySource,  Game.constructionSites[creep.memory.project.taskDestinationId]);
             break;
         case worker_assignment_type.UPGRADE:
             upgrade(creep, energySource);
             break;
         case worker_assignment_type.REPAIR:
-            repair(creep, energySource, taskDestination);
+            repair(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
             break;
         default:
-            harvest(creep, energySource, taskDestination);
+            harvest(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
             break;
    }
 };
+
+/**
+ * 
+ * @param {Room} room 
+ * @returns { Project[] } Array of Build Projects
+ */
+ const getAllActiveBuildProjects = (room) => {
+    const buildingSites = room.find(FIND_MY_CONSTRUCTION_SITES);
+ 
+    const energySources = room.find(FIND_SOURCES_ACTIVE);
+ 
+    const projects = buildingSites.map(buildingSite => { 
+       const paths = energySources.map(source => {
+          return room.findPath(source.pos, buildingSite.pos);
+       });
+       return {
+          assignmentType: worker_assignment_type.BUILD,
+          energySourceId: energySources[getShortestPath(paths)].id,
+          taskDestinationId: buildingSite.id,
+          workerIds: []
+       };
+    });
+ 
+    return projects;
+ };
 
 /**
  * 
@@ -278,8 +315,8 @@ const doAssignment = (creep) => {
  */
 const removeInactiveProjectsFromStorage = (storedProjects, activeProjects) => {
     let updatedProjects = storedProjects;
-    const toBeRemovedProjectIndices = [];
-    const workersOnRemovedProjects = [];
+    let toBeRemovedProjectIndices = [];
+    let workersOnRemovedProjects = [];
 
     storedProjects.forEach((storedProject, storedProjectIndex) => {
         let projectStillActive = false;
@@ -312,12 +349,37 @@ const removeInactiveProjectsFromStorage = (storedProjects, activeProjects) => {
 };
 
 /**
+* 
+* @param {Room} room 
+* @returns { Project[] } Array of Upgrade Projects
+*/
+const getAllActiveUpgradeProjects = (room) => {
+   if (room.controller) {
+      const energySources = room.find(FIND_SOURCES_ACTIVE);
+ 
+      const paths = energySources.map(source => {
+         return room.findPath(source.pos, room.controller.pos);
+      });
+
+      return [{
+         assignmentType: worker_assignment_type.UPGRADE,
+         energySourceId: energySources[getShortestPath(paths)].id,
+         taskDestinationId: null,
+         workerIds: []
+      }];
+ 
+   } else {
+      return []
+   }
+ };
+
+/**
  * @param {Room} room
  * @returns { Project[] }
  */
 const manageProjects = (room) => {
     // Build up list of active Projects
-    const activeProjects = getAllActiveEnergyProjects(room);
+    const activeProjects = getAllActiveEnergyProjects(room).concat(getAllActiveBuildProjects(room), getAllActiveUpgradeProjects(room));
 
     // Get stored projects in memory
     const storedProjects = room.memory.projects ? room.memory.projects : [];
@@ -357,7 +419,7 @@ const ProjectsManager = {
  */
 const fixProjectOverAssignment = (projects, numberOfWorkers) => {
    let updatedProjects = projects;
-   const unassignedWorkers = [];
+   let unassignedWorkers = [];
 
    // nothing to do if there are no projects
    if (projects.length === 0) {
@@ -376,7 +438,15 @@ const fixProjectOverAssignment = (projects, numberOfWorkers) => {
 
       if ( currentNumberOfWorkers > numberOfWorkersAllowance ) {
          const numberOfExcessWorkers = currentNumberOfWorkers - numberOfWorkersAllowance;
-         unassignedWorkers = unassignedWorkers.concat(updatedProjects[index].workerIds.splice(-numberOfExcessWorkers, numberOfExcessWorkers));
+
+         const releasedWorkers = updatedProjects[index].workerIds.splice(-numberOfExcessWorkers, numberOfExcessWorkers);
+
+         // update workers project
+         releasedWorkers.forEach((workerId) => {
+            Game.creeps[workerId].memory.project = {};
+         });
+
+         unassignedWorkers = unassignedWorkers.concat(releasedWorkers);
       }
    });
 
@@ -409,7 +479,15 @@ const fixProjectOverAssignment = (projects, numberOfWorkers) => {
 
          if ( currentNumberOfWorkers < numberOfWorkersAllowance ) {
             const numberOfSpareSlots =  numberOfWorkersAllowance - currentNumberOfWorkers;
-            updatedProjects[index].workerIds.push(unassignedWorkers.splice(-numberOfSpareSlots, numberOfSpareSlots));
+            const projectNewWorkers = unassignedWorkers.splice(-numberOfSpareSlots, numberOfSpareSlots);
+            
+            // update workers project
+            projectNewWorkers.forEach((workerId) => {
+                Game.creeps[workerId].memory.project = project;
+            });
+            
+            // update project record
+            updatedProjects[index].workerIds = project.workerIds.concat(projectNewWorkers);
          }
       });
       
@@ -426,7 +504,7 @@ const fixProjectOverAssignment = (projects, numberOfWorkers) => {
 const manageWorkers = (room) => {
     // find already idle workers
     const allWorkers = [];
-    const idleWorkers = [];
+    let idleWorkers = [];
     for(const name in Game.creeps) {
         const creep = Game.creeps[name];
         if (creep.memory.role === 'worker') {
@@ -447,7 +525,6 @@ const manageWorkers = (room) => {
 
     // update room memory
     room.memory.projects = storeProjects;
-
 };
 
 const TaskMaster = {

@@ -1,5 +1,7 @@
+import { getAllActiveBuildProjects } from "./build.skills";
 import { getAllActiveEnergyProjects } from "./energy.skills";
 import { addActiveProjectsToStorage, removeInactiveProjectsFromStorage } from "./skills";
+import { getAllActiveUpgradeProjects } from "./upgrader.skills";
 
 /**
  * @param {Room} room
@@ -7,7 +9,7 @@ import { addActiveProjectsToStorage, removeInactiveProjectsFromStorage } from ".
  */
 export const manageProjects = (room) => {
     // Build up list of active Projects
-    const activeProjects = getAllActiveEnergyProjects(room);
+    const activeProjects = getAllActiveEnergyProjects(room).concat(getAllActiveBuildProjects(room), getAllActiveUpgradeProjects(room));
 
     // Get stored projects in memory
     const storedProjects = room.memory.projects ? room.memory.projects : [];

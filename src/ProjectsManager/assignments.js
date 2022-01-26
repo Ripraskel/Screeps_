@@ -1,5 +1,6 @@
 import { getAllActiveBuildProjects } from "./build.skills";
 import { getAllActiveEnergyProjects } from "./energy.skills";
+import { getAllActiveRepairProjects } from "./repair.skills";
 import { addActiveProjectsToStorage, removeInactiveProjectsFromStorage } from "./skills";
 import { getAllActiveUpgradeProjects } from "./upgrader.skills";
 
@@ -9,7 +10,7 @@ import { getAllActiveUpgradeProjects } from "./upgrader.skills";
  */
 export const manageProjects = (room) => {
     // Build up list of active Projects
-    const activeProjects = getAllActiveEnergyProjects(room).concat(getAllActiveBuildProjects(room), getAllActiveUpgradeProjects(room));
+    const activeProjects = getAllActiveEnergyProjects(room).concat(getAllActiveBuildProjects(room), getAllActiveUpgradeProjects(room), getAllActiveRepairProjects(room));
 
     // Get stored projects in memory
     const storedProjects = room.memory.projects ? room.memory.projects : [];

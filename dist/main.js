@@ -7,7 +7,7 @@
 const buildConstants = () => {
     const constants = {
         spawnGoal: {
-            workers: 10 // calculate this in future?
+            workers: 15 // calculate this in future?
         },
         room: Game.spawns['Spawn1'].room,
         spawnName: "Spawn1"
@@ -32,6 +32,7 @@ const spawnWorker = (spawnName) => {
         return false;
     }
 };
+
 /**
  * Clears up the Memory of fallen creeps
  */
@@ -208,7 +209,7 @@ const doAssignment = (creep) => {
             upgrade(creep, energySource);
             break;
         case worker_assignment_type.REPAIR:
-            repair(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
+            repair(creep, energySource,  Game.getObjectById(creep.memory.project.taskDestinationId));
             break;
         default:
             harvest(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
@@ -264,6 +265,40 @@ const doAssignment = (creep) => {
           assignmentType: worker_assignment_type.HARVEST,
           energySourceId: energySources[getShortestPath(paths)].id,
           taskDestinationId: energyContainer.id,
+          workerIds: []
+       };
+    });
+ 
+    return projects;
+ };
+
+/**
+ * 
+ * @param {Room} room 
+ * @returns { Project[] } Array of Repair Projects
+ */
+ const getAllActiveRepairProjects = (room) => {
+   const repairSites = room.find(FIND_STRUCTURES, {
+      filter: (structure) => {
+         switch (structure.structureType) {
+            case STRUCTURE_WALL:
+               return structure.hits/structure.hitsMax < 0.0001;
+            default:
+               return structure.hits < structure.hitsMax;
+         }
+      }
+   });
+ 
+    const energySources = room.find(FIND_SOURCES_ACTIVE);
+ 
+    const projects = repairSites.map(repairSite => { 
+       const paths = energySources.map(source => {
+          return room.findPath(source.pos, repairSite.pos);
+       });
+       return {
+          assignmentType: worker_assignment_type.REPAIR,
+          energySourceId: energySources[getShortestPath(paths)].id,
+          taskDestinationId: repairSite.id,
           workerIds: []
        };
     });
@@ -379,7 +414,7 @@ const getAllActiveUpgradeProjects = (room) => {
  */
 const manageProjects = (room) => {
     // Build up list of active Projects
-    const activeProjects = getAllActiveEnergyProjects(room).concat(getAllActiveBuildProjects(room), getAllActiveUpgradeProjects(room));
+    const activeProjects = getAllActiveEnergyProjects(room).concat(getAllActiveBuildProjects(room), getAllActiveUpgradeProjects(room), getAllActiveRepairProjects(room));
 
     // Get stored projects in memory
     const storedProjects = room.memory.projects ? room.memory.projects : [];
@@ -432,7 +467,7 @@ const fixProjectOverAssignment = (projects, numberOfWorkers) => {
    // remove excess workers from projects and push to unassigned workers pool
    projects.forEach((project, index) => {
       // Build up project allowance based on base workers per project and any overflow
-      const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 <= index ? 1 : 0 );
+      const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 >= index ? 1 : 0 );
       
       const currentNumberOfWorkers = project.workerIds.length;
 
@@ -473,7 +508,7 @@ const fixProjectOverAssignment = (projects, numberOfWorkers) => {
       // push to unassigned workers to project space
       projects.forEach((project, index) => {
          // Build up project allowance based on base workers per project and any overflow
-         const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 <= index ? 1 : 0 );
+         const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 >= index ? 1 : 0 );
          
          const currentNumberOfWorkers = project.workerIds.length;
 

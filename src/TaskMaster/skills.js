@@ -23,7 +23,7 @@ export const fixProjectOverAssignment = (projects, numberOfWorkers) => {
    // remove excess workers from projects and push to unassigned workers pool
    projects.forEach((project, index) => {
       // Build up project allowance based on base workers per project and any overflow
-      const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 <= index ? 1 : 0 );
+      const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 >= index ? 1 : 0 );
       
       const currentNumberOfWorkers = project.workerIds.length;
 
@@ -66,7 +66,7 @@ export const fixProjectOverAssignment = (projects, numberOfWorkers) => {
       // push to unassigned workers to project space
       projects.forEach((project, index) => {
          // Build up project allowance based on base workers per project and any overflow
-         const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 <= index ? 1 : 0 );
+         const numberOfWorkersAllowance = workersPerProject + (workerRemainder !== 0 && workerRemainder -1 >= index ? 1 : 0 );
          
          const currentNumberOfWorkers = project.workerIds.length;
 

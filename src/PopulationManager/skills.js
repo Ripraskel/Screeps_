@@ -14,6 +14,19 @@ export const spawnWorker = (spawnName) => {
         return false;
     }
 }
+
+export const spawnSoldier = (spawnName) => {
+    const body_parts = [ATTACK,ATTACK,MOVE, MOVE];
+    const name = 'Soldier' + Game.time;
+    const role = 'soldier';
+
+    if (Game.spawns[spawnName].spawnCreep(body_parts, name, { memory: {role, project: {}} }) === 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 /**
  * Clears up the Memory of fallen creeps
  */

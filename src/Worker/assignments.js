@@ -23,7 +23,7 @@ export const doAssignment = (creep) => {
             upgrade(creep, energySource);
             break;
         case worker_assignment_type.REPAIR:
-            repair(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);
+            repair(creep, energySource,  Game.getObjectById(creep.memory.project.taskDestinationId));
             break;
         default:
             harvest(creep, energySource,  Game.structures[creep.memory.project.taskDestinationId]);

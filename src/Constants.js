@@ -5,7 +5,7 @@
 export const buildConstants = () => {
     const constants = {
         spawnGoal: {
-            workers: 10 // calculate this in future?
+            workers: 15 // calculate this in future?
         },
         room: Game.spawns['Spawn1'].room,
         spawnName: "Spawn1"

@@ -15,24 +15,12 @@ export const spawnWorker = (spawnName) => {
     }
 }
 
-export const spawnSoldier = (spawnName) => {
-    const body_parts = [ATTACK,ATTACK,MOVE, MOVE];
-    const name = 'Soldier' + Game.time;
-    const role = 'soldier';
-
-    if (Game.spawns[spawnName].spawnCreep(body_parts, name, { memory: {role, project: {}} }) === 0) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 /**
  * Clears up the Memory of fallen creeps
  */
 export const reapTheDead = (room) => {
     for(const name in Memory.creeps) {
-        if(!Game.creeps[name]) {
+        if(!Game.creeps[name] && Memory.creeps[name].role === "worker") {
             let projects = room.memory.projects;
             projects.forEach((project, projIndex) => {
                 let deadWorkerIndices = [];

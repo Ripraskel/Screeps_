@@ -1,10 +1,11 @@
 
+import { Army } from "./Army";
 import { buildConstants } from "./constants";
 
-import { PopulationManager } from "./PopulationManager/index";
-import { ProjectsManager } from "./ProjectsManager";
-import { TaskMaster } from "./TaskMaster";
-import { Workers } from "./Worker";
+import { PopulationManager } from "./WorkForce/PopulationManager/index";
+import { ProjectsManager } from "./WorkForce/ProjectsManager/index";
+import { TaskMaster } from "./WorkForce/TaskMaster/index";
+import { Workers } from "./WorkForce/Worker/index";
 
 
 module.exports.loop = function () {
@@ -15,5 +16,7 @@ module.exports.loop = function () {
     ProjectsManager.run(constants);
     TaskMaster.run(constants);
     Workers.run();
+    
+    Army.run(constants);
 
 }

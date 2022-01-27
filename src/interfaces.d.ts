@@ -19,3 +19,10 @@ interface Constants {
 }
 
 declare const Constants: Constants;
+
+interface Mission {
+    targetId: string
+    taskForce: string[]
+}
+
+declare const Mission: Mission;

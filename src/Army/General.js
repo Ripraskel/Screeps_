@@ -19,6 +19,8 @@ class General {
         this.#debriefReturningTroops(returningTroops);
 
         this.#deployTroops(this.#getTroopsInTheBarracks());
+
+        this.room.memory.hitlist = this.#hitlist;
     }
 
     /**

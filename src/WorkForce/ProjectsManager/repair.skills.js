@@ -12,6 +12,8 @@ import { worker_assignment_type } from '../Worker/assignments';
          switch (structure.structureType) {
             case STRUCTURE_WALL:
                return structure.hits/structure.hitsMax < 0.0001;
+            case STRUCTURE_ROAD:
+               return structure.hits/structure.hitsMax < 0.5;
             default:
                return structure.hits < structure.hitsMax;
          }

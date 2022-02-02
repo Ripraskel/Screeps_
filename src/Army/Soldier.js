@@ -8,7 +8,6 @@ class Soldier {
     constructor () {
     }
 
-
     run = () => {
         for(var name in Game.creeps) {
             var creep = Game.creeps[name];
@@ -25,16 +24,24 @@ class Soldier {
         }
     }
 
+    /**
+     * 
+     * @param {Creep} creep 
+     */
     #attack = (creep) => {
         const target = Game.creeps[creep.memory.mission.targetId];
 
         if(creep.attack(target) == ERR_NOT_IN_RANGE) {
             creep.moveTo(target);
+            creep.say('👣')
+        } else {
+            creep.say('⚔ attack!')
         }
     }
 
     #guard = (creep) => {
         creep.moveTo(3, 34);
+        creep.say('🛡')
     }
 
 }

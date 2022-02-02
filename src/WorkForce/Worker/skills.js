@@ -1,7 +1,36 @@
+/**
+ * 
+ * @param {Creep} creep 
+ * @param {Source} currentSource 
+ */
+const checkForAlternateSource = (creep, currentSource) => {
+    if (creep.room.findPath(creep.pos,  currentSource.pos).length <= 3) {
+        creep.memory.secondsWithoutMoving = creep.memory.secondsWithoutMoving + 1;
+    }
+    if (creep.memory.secondsWithoutMoving === 5) {
+        const energySources = creep.room.find(FIND_SOURCES_ACTIVE);
+        energySources.forEach((source) => {
+            if (source.id !== currentSource.id) {
+                creep.memory.project.energySourceId = source.id;
+            }
+        })
+        creep.memory.secondsWithoutMoving = 0;
+    } 
+}
+/**
+ * 
+ * @param {Creep} creep 
+ * @param {*} energySource 
+ * @param {*} energyContainer 
+ */
 export const harvest = (creep, energySource, energyContainer) => {
+    
     if(creep.store.getFreeCapacity() > 0) {
         if(creep.harvest(energySource) == ERR_NOT_IN_RANGE) {
+            checkForAlternateSource(creep, energySource);
             creep.moveTo(energySource, {visualizePathStyle: {stroke: '#ffaa00'}});
+        } else {
+            creep.memory.secondsWithoutMoving = 0;
         }
     }
     else {
@@ -23,7 +52,10 @@ export const build = (creep, energySource, constructionSite) => {
     
     if(!creep.memory.building) {
         if(creep.harvest(energySource) == ERR_NOT_IN_RANGE) {
+            checkForAlternateSource(creep, energySource);
             creep.moveTo(energySource, {visualizePathStyle: {stroke: '#ffaa00'}});
+        } else {
+            creep.memory.secondsWithoutMoving = 0;
         }
     }
     else {
@@ -50,7 +82,10 @@ export const upgrade = (creep, energySource) => {
     }
     else {
         if(creep.harvest(energySource) == ERR_NOT_IN_RANGE) {
+            checkForAlternateSource(creep, energySource);
             creep.moveTo(energySource, {visualizePathStyle: {stroke: '#ffaa00'}});
+        } else {
+            creep.memory.secondsWithoutMoving = 0;
         }
     }
 };

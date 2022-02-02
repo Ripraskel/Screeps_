@@ -8,7 +8,7 @@ export const spawnWorker = (spawnName) => {
     const name = 'Worker' + Game.time;
     const role = 'worker';
 
-    if (Game.spawns[spawnName].spawnCreep(body_parts, name, { memory: {role, project: {}} }) === 0) {
+    if (Game.spawns[spawnName].spawnCreep(body_parts, name, { memory: {role, project: {}, secondsWithoutMoving: 0} }) === 0) {
         return true;
     } else {
         return false;
